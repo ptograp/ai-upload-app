@@ -31,7 +31,6 @@ export default function Home() {
         return;
       }
 
-      console.log('🔍 검색결과:', data);
       setUploadedFiles(data || []);
     } catch (err) {
       console.error('❌ 예외 발생:', err.message);
