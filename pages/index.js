@@ -33,37 +33,35 @@ export default function Home() {
 
     setUploading(true);
     const fileName = file.name;
-    const encodedName = encodeURIComponent(fileName);
+    const encodedName = encodeURIComponent(fileName.replaceAll(' ', '_'));
     const filePath = `${Date.now()}-${encodedName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(filePath, file);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      setMessage('업로드 실패: ' + uploadError.message);
-      setUploading(false);
-      return;
-    }
+      if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(filePath);
 
-    const { error: insertError } = await supabase
-      .from('Files')
-      .insert([{ filename: file.name, url: publicUrl }]);
+      const { error: insertError } = await supabase
+        .from('Files')
+        .insert([{ filename: file.name, url: publicUrl }]);
 
-    if (insertError) {
-      setMessage('DB 저장 실패: ' + insertError.message);
-    } else {
+      if (insertError) throw insertError;
+
       setMessage('✅ 업로드 완료!');
       setFile(null);
       fetchFiles();
+    } catch (error) {
+      console.error('Upload error:', error);
+      setMessage(`업로드 실패: ${error.message || '알 수 없는 오류'}`);
+    } finally {
+      setUploading(false);
     }
-
-    setUploading(false);
   };
 
   const filteredFiles = uploadedFiles.filter((item) =>
