@@ -1,11 +1,29 @@
-import { useState } from "react";
+// pages/index.js
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function Home() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [publicUrl, setPublicUrl] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  const userId = supabase.auth.getUser()?.id || "anonymous"; // fallback
+  const folder = "uploads";
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      const { data, error } = await supabase
+        .from("Files")
+        .select("*")
+        .eq("user_id", userId)
+        .order("uploaded_at", { ascending: false });
+
+      if (!error) setUploadedFiles(data);
+    };
+
+    fetchFiles();
+  }, [message]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -13,42 +31,42 @@ export default function Home() {
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage("⚠️ 파일을 먼저 선택하세요.");
+      setMessage("파일을 먼저 선택하세요.");
       return;
     }
 
     setUploading(true);
+    const encodedName = encodeURIComponent(file.name);
+    const filePath = `${folder}/${userId}/${Date.now()}-${encodedName}`;
 
-    // 안전한 파일 경로 (영문+숫자만 사용)
-    const timestamp = Date.now();
-    const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_"); // 특수문자 제거
-    const filePath = `${timestamp}_${safeFileName}`;
-
-    // 1. Supabase Storage에 업로드
+    // 1. Supabase Storage 업로드
     const { error: uploadError } = await supabase.storage
       .from("files")
       .upload(filePath, file);
 
     if (uploadError) {
-      console.error("🚫 업로드 오류:", uploadError);
+      console.error("🚫 Upload error:", uploadError);
       setMessage("업로드 실패: " + uploadError.message);
       setUploading(false);
       return;
     }
 
-    // 2. Public URL 가져오기
+    // 2. 공개 URL 얻기
     const {
       data: { publicUrl },
     } = supabase.storage.from("files").getPublicUrl(filePath);
-    setPublicUrl(publicUrl);
 
-    // 3. DB에 메타데이터 기록
-    const { error: insertError } = await supabase
-      .from("Files")
-      .insert([{ filename: file.name, url: publicUrl }]);
+    // 3. Supabase DB에 기록
+    const { error: insertError } = await supabase.from("Files").insert([
+      {
+        filename: file.name,
+        url: publicUrl,
+        user_id: userId,
+        path: filePath,
+      },
+    ]);
 
     if (insertError) {
-      console.error("🚫 DB 저장 오류:", insertError);
       setMessage("DB 저장 실패: " + insertError.message);
     } else {
       setMessage("✅ 업로드 완료!");
@@ -58,9 +76,27 @@ export default function Home() {
     setUploading(false);
   };
 
+  const handleDelete = async (fileEntry) => {
+    const { error: deleteStorageError } = await supabase.storage
+      .from("files")
+      .remove([fileEntry.path]);
+
+    const { error: deleteDbError } = await supabase
+      .from("Files")
+      .delete()
+      .eq("id", fileEntry.id);
+
+    if (!deleteStorageError && !deleteDbError) {
+      setMessage("🗑️ 삭제 완료!");
+    } else {
+      console.error("삭제 오류:", deleteStorageError || deleteDbError);
+      setMessage("삭제 실패");
+    }
+  };
+
   return (
     <div className="p-8 max-w-xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold">📂 파일 업로드</h1>
+      <h1 className="text-2xl font-bold">📤 파일 업로드</h1>
       <input type="file" onChange={handleFileChange} />
       <button
         onClick={handleUpload}
@@ -70,16 +106,27 @@ export default function Home() {
         {uploading ? "업로드 중..." : "업로드"}
       </button>
       {message && <p>{message}</p>}
-      {publicUrl && (
-        <a
-          href={publicUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 underline"
-        >
-          🔗 업로드된 파일 보기
-        </a>
-      )}
+
+      <ul className="mt-8 space-y-2">
+        {uploadedFiles.map((file) => (
+          <li key={file.id} className="flex items-center gap-2">
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              📎 {file.filename}
+            </a>
+            <button
+              onClick={() => handleDelete(file)}
+              className="text-sm text-red-500 hover:underline"
+            >
+              삭제
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
