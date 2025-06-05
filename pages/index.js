@@ -32,6 +32,15 @@ export default function Home() {
       return;
     }
 
+    // 이미 업로드된 파일인지 확인
+    const duplicateCheck = uploadedFiles.find(
+      (item) => item.filename === file.name
+    );
+    if (duplicateCheck) {
+      setMessage('⚠️ 이미 업로드된 파일입니다.');
+      return;
+    }
+
     setUploading(true);
     const fileExt = file.name.split('.').pop();
     const filePath = `${Date.now()}-${uuidv4()}.${fileExt}`;
@@ -71,28 +80,31 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
       <img src="/t3q-logo.png" alt="T3Q Logo" className="w-[160px] mb-4" />
-      <div className="flex items-center gap-2 mb-4 w-full max-w-lg">
-        <input
-          type="text"
-          placeholder="파일 이름 검색..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border px-4 py-2 rounded w-full"
-        />
-        <input type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
-        <label
-          htmlFor="file-upload"
-          className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
-        >
-          파일 선택
-        </label>
-        <button
-          onClick={handleUpload}
-          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-          disabled={uploading}
-        >
-          {uploading ? '업로드 중...' : '업로드'}
-        </button>
+      <div className="flex flex-col items-center gap-2 mb-4 w-full max-w-lg">
+        <div className="flex w-full gap-2">
+          <input
+            type="text"
+            placeholder="파일 이름 검색..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border px-4 py-2 rounded w-full"
+          />
+          <input type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
+          <label
+            htmlFor="file-upload"
+            className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
+          >
+            파일 선택
+          </label>
+          <button
+            onClick={handleUpload}
+            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+            disabled={uploading}
+          >
+            {uploading ? '업로드 중...' : '업로드'}
+          </button>
+        </div>
+        {file && <span className="text-xs text-gray-500">선택된 파일: {file.name}</span>}
       </div>
       {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
 
