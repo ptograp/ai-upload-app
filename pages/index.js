@@ -17,12 +17,27 @@ export default function Home() {
   }, [search]);
 
   const fetchFiles = async () => {
-    const { data, error } = await supabase
-      .from('Files')
-      .select('*')
-      .ilike('filename', `%${search}%`)
-      .order('uploaded_at', { ascending: false });
-    if (data) setUploadedFiles(data);
+    try {
+      const { data, error } = await supabase
+        .from('Files')
+        .select('*')
+        .ilike('filename', `%${search}%`)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        console.error('📛 검색 오류:', error.message);
+        setMessage(`검색 실패: ${error.message}`);
+        setUploadedFiles([]);
+        return;
+      }
+
+      console.log('🔍 검색결과:', data);
+      setUploadedFiles(data || []);
+    } catch (err) {
+      console.error('❌ 예외 발생:', err.message);
+      setMessage(`검색 중 오류 발생: ${err.message}`);
+      setUploadedFiles([]);
+    }
   };
 
   const handleFileChange = (e) => {
