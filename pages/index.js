@@ -1,5 +1,6 @@
 // pages/index.js
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,6 +10,7 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     fetchFiles();
@@ -84,16 +86,26 @@ export default function Home() {
   );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4 relative">
+      <button
+        onClick={() => router.push('/files')}
+        className="absolute top-4 right-4 text-sm text-blue-500 hover:underline"
+      >
+        업로드된 파일 목록
+      </button>
+
       <img src="/t3q-logo.png" alt="T3Q Logo" className="w-[160px] mb-4" />
 
       <div className="flex flex-col items-center gap-1 mb-4 w-full max-w-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center w-full gap-2">
+        <div className="flex flex-wrap sm:flex-row sm:items-center w-full gap-2 justify-center">
           <input
             type="text"
             placeholder="파일 이름 검색..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setSearch(e.target.value);
+            }}
             className="border px-4 py-2 rounded w-full sm:w-1/2"
           />
 
@@ -118,7 +130,7 @@ export default function Home() {
             {uploading ? '업로드 중...' : '업로드'}
           </button>
         </div>
-        {file && <span className="text-xs text-gray-500">선택된 파일: {file.name}</span>}
+        {file && <span className="text-xs text-gray-500 mt-1">선택된 파일: {file.name}</span>}
       </div>
 
       {message && (
@@ -149,7 +161,7 @@ export default function Home() {
             </div>
           ))
         ) : (
-          <p className="text-sm text-gray-400">검색 결과가 없습니다.</p>
+          <p className="text-sm text-gray-400 text-center">❌ 검색 결과가 없습니다.</p>
         )}
       </div>
     </div>
