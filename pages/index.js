@@ -156,7 +156,7 @@ export default function Home() {
       )}
 
       <div className="w-full max-w-lg max-h-[300px] overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-        {uploadedFiles.length > 0 ? (
+        {Array.isArray(uploadedFiles) && uploadedFiles.length > 0 ? (
           uploadedFiles.map((item) => (
             <div
               key={item.url}
