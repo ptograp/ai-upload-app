@@ -9,11 +9,15 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    fetchFiles();
+    if (search.trim() !== '') {
+      fetchFiles();
+    } else {
+      setUploadedFiles(null);
+    }
   }, [search]);
 
   const fetchFiles = async () => {
@@ -50,7 +54,7 @@ export default function Home() {
       return;
     }
 
-    const duplicateCheck = uploadedFiles.find(
+    const duplicateCheck = uploadedFiles?.find(
       (item) => item.filename === file.name
     );
     if (duplicateCheck) {
@@ -156,7 +160,7 @@ export default function Home() {
       )}
 
       <div className="w-full max-w-lg max-h-[300px] overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-        {Array.isArray(uploadedFiles) && uploadedFiles.length > 0 ? (
+        {uploadedFiles === null ? null : uploadedFiles.length > 0 ? (
           uploadedFiles.map((item) => (
             <div
               key={item.url}
