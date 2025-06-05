@@ -9,14 +9,14 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState(undefined); // undefined 초기값으로 변경
   const router = useRouter();
 
   useEffect(() => {
     if (search.trim() !== '') {
       fetchFiles();
     } else {
-      setUploadedFiles(null);
+      setUploadedFiles(undefined);
     }
   }, [search]);
 
@@ -160,7 +160,7 @@ export default function Home() {
       )}
 
       <div className="w-full max-w-lg max-h-[300px] overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-        {uploadedFiles === null ? null : uploadedFiles.length > 0 ? (
+        {uploadedFiles === undefined ? null : uploadedFiles.length > 0 ? (
           uploadedFiles.map((item) => (
             <div
               key={item.url}
