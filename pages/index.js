@@ -14,12 +14,13 @@ export default function Home() {
 
   useEffect(() => {
     fetchFiles();
-  }, []);
+  }, [search]);
 
   const fetchFiles = async () => {
     const { data, error } = await supabase
       .from('Files')
       .select('*')
+      .ilike('filename', `%${search}%`)
       .order('uploaded_at', { ascending: false });
     if (data) setUploadedFiles(data);
   };
@@ -81,10 +82,6 @@ export default function Home() {
     }
   };
 
-  const filteredFiles = uploadedFiles.filter((item) =>
-    item.filename.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4 relative">
       <button
@@ -97,38 +94,40 @@ export default function Home() {
       <img src="/t3q-logo.png" alt="T3Q Logo" className="w-[160px] mb-4" />
 
       <div className="flex flex-col items-center gap-1 mb-4 w-full max-w-lg">
-        <div className="flex flex-wrap sm:flex-row sm:items-center w-full gap-2 justify-center">
+        <div className="flex flex-col sm:flex-row sm:items-center w-full gap-2 justify-center">
           <input
             type="text"
             placeholder="파일 이름 검색..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') setSearch(e.target.value);
+              if (e.key === 'Enter') fetchFiles();
             }}
             className="border px-4 py-2 rounded w-full sm:w-1/2"
           />
 
-          <input
-            type="file"
-            onChange={handleFileChange}
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
-          >
-            파일 선택
-          </label>
+          <div className="flex gap-2">
+            <input
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
+            >
+              파일 선택
+            </label>
 
-          <button
-            onClick={handleUpload}
-            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-            disabled={uploading}
-          >
-            {uploading ? '업로드 중...' : '업로드'}
-          </button>
+            <button
+              onClick={handleUpload}
+              className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+              disabled={uploading}
+            >
+              {uploading ? '업로드 중...' : '업로드'}
+            </button>
+          </div>
         </div>
         {file && <span className="text-xs text-gray-500 mt-1">선택된 파일: {file.name}</span>}
       </div>
@@ -142,8 +141,8 @@ export default function Home() {
       )}
 
       <div className="w-full max-w-lg max-h-[300px] overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-        {filteredFiles.length > 0 ? (
-          filteredFiles.map((item) => (
+        {uploadedFiles.length > 0 ? (
+          uploadedFiles.map((item) => (
             <div
               key={item.url}
               className="flex justify-between items-center border-b pb-1"
