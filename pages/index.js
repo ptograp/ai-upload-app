@@ -1,6 +1,7 @@
 // pages/index.js
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Home() {
   const [file, setFile] = useState(null);
@@ -32,9 +33,8 @@ export default function Home() {
     }
 
     setUploading(true);
-    const fileName = file.name;
-    const encodedName = encodeURIComponent(fileName.replaceAll(' ', '_'));
-    const filePath = `${Date.now()}-${encodedName}`;
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${Date.now()}-${uuidv4()}.${fileExt}`;
 
     try {
       const { error: uploadError } = await supabase.storage
