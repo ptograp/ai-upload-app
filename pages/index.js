@@ -28,11 +28,10 @@ export default function Home() {
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage('파일을 먼저 선택하세요.');
+      setMessage('⚠️ 파일을 먼저 선택하세요.');
       return;
     }
 
-    // 이미 업로드된 파일인지 확인
     const duplicateCheck = uploadedFiles.find(
       (item) => item.filename === file.name
     );
@@ -52,9 +51,9 @@ export default function Home() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('files')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('files').getPublicUrl(filePath);
 
       const { error: insertError } = await supabase
         .from('Files')
@@ -67,7 +66,14 @@ export default function Home() {
       fetchFiles();
     } catch (error) {
       console.error('Upload error:', error);
-      setMessage(`업로드 실패: ${error.message || '알 수 없는 오류'}`);
+      if (
+        error?.message?.includes('duplicate key value') ||
+        error?.message?.includes('Files_pkey')
+      ) {
+        setMessage('⚠️ 이미 업로드된 파일입니다.');
+      } else {
+        setMessage(`업로드 실패: ${error.message || '알 수 없는 오류'}`);
+      }
     } finally {
       setUploading(false);
     }
@@ -80,8 +86,8 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
       <img src="/t3q-logo.png" alt="T3Q Logo" className="w-[160px] mb-4" />
-      <div className="flex flex-col items-center gap-2 mb-4 w-full max-w-lg">
-        <div className="flex w-full gap-2">
+      <div className="flex flex-col items-center gap-1 mb-4 w-full max-w-lg">
+        <div className="flex flex-col sm:flex-row w-full gap-2 items-center">
           <input
             type="text"
             placeholder="파일 이름 검색..."
@@ -89,29 +95,45 @@ export default function Home() {
             onChange={(e) => setSearch(e.target.value)}
             className="border px-4 py-2 rounded w-full"
           />
-          <input type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
-          <label
-            htmlFor="file-upload"
-            className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
-          >
-            파일 선택
-          </label>
-          <button
-            onClick={handleUpload}
-            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-            disabled={uploading}
-          >
-            {uploading ? '업로드 중...' : '업로드'}
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
+            >
+              파일 선택
+            </label>
+            <button
+              onClick={handleUpload}
+              className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+              disabled={uploading}
+            >
+              {uploading ? '업로드 중...' : '업로드'}
+            </button>
+          </div>
         </div>
         {file && <span className="text-xs text-gray-500">선택된 파일: {file.name}</span>}
       </div>
-      {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
+      {message && (
+        <p
+          className={`text-sm mb-4 ${message.includes('✅') ? 'text-green-600' : 'text-red-500'}`}
+        >
+          {message}
+        </p>
+      )}
 
       <div className="w-full max-w-lg max-h-[300px] overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
         {filteredFiles.length > 0 ? (
           filteredFiles.map((item) => (
-            <div key={item.url} className="flex justify-between items-center border-b pb-1">
+            <div
+              key={item.url}
+              className="flex justify-between items-center border-b pb-1"
+            >
               <span className="text-sm truncate w-3/4">📄 {item.filename}</span>
               <a
                 href={item.url}
