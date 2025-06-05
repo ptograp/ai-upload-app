@@ -1,12 +1,11 @@
-// pages/index.js
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Home() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [search, setSearch] = useState('');
+  const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
@@ -15,9 +14,9 @@ export default function Home() {
 
   const fetchFiles = async () => {
     const { data, error } = await supabase
-      .from('Files')
-      .select('*')
-      .order('uploaded_at', { ascending: false });
+      .from("Files")
+      .select("*")
+      .order("uploaded_at", { ascending: false });
     if (data) setUploadedFiles(data);
   };
 
@@ -27,38 +26,42 @@ export default function Home() {
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage('파일을 먼저 선택하세요.');
+      setMessage("⚠️ 파일을 먼저 선택하세요.");
       return;
     }
 
     setUploading(true);
-    const fileName = file.name;
-    const encodedName = encodeURIComponent(fileName.replaceAll(' ', '_'));
-    const filePath = `${Date.now()}-${encodedName}`;
+
+    const timestamp = Date.now();
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+    const filePath = `${timestamp}_${safeFileName}`;
 
     try {
       const { error: uploadError } = await supabase.storage
-        .from('files')
-        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        .from("files")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('files')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("files").getPublicUrl(filePath);
 
       const { error: insertError } = await supabase
-        .from('Files')
+        .from("Files")
         .insert([{ filename: file.name, url: publicUrl }]);
 
       if (insertError) throw insertError;
 
-      setMessage('✅ 업로드 완료!');
+      setMessage("✅ 업로드 완료!");
       setFile(null);
       fetchFiles();
     } catch (error) {
-      console.error('Upload error:', error);
-      setMessage(`업로드 실패: ${error.message || '알 수 없는 오류'}`);
+      console.error("Upload error:", error);
+      setMessage(`업로드 실패: ${error.message || "알 수 없는 오류"}`);
     } finally {
       setUploading(false);
     }
@@ -91,9 +94,10 @@ export default function Home() {
           className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
           disabled={uploading}
         >
-          {uploading ? '업로드 중...' : '업로드'}
+          {uploading ? "업로드 중..." : "업로드"}
         </button>
       </div>
+
       {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
 
       <div className="w-full max-w-lg space-y-2">
