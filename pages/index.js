@@ -86,39 +86,41 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
       <img src="/t3q-logo.png" alt="T3Q Logo" className="w-[160px] mb-4" />
+
       <div className="flex flex-col items-center gap-1 mb-4 w-full max-w-lg">
-        <div className="flex flex-col sm:flex-row w-full gap-2 items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center w-full gap-2">
           <input
             type="text"
             placeholder="파일 이름 검색..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border px-4 py-2 rounded w-full"
+            className="border px-4 py-2 rounded w-full sm:w-1/2"
           />
-          <div className="flex items-center gap-2">
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
-            >
-              파일 선택
-            </label>
-            <button
-              onClick={handleUpload}
-              className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-              disabled={uploading}
-            >
-              {uploading ? '업로드 중...' : '업로드'}
-            </button>
-          </div>
+
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="hidden"
+            id="file-upload"
+          />
+          <label
+            htmlFor="file-upload"
+            className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
+          >
+            파일 선택
+          </label>
+
+          <button
+            onClick={handleUpload}
+            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+            disabled={uploading}
+          >
+            {uploading ? '업로드 중...' : '업로드'}
+          </button>
         </div>
         {file && <span className="text-xs text-gray-500">선택된 파일: {file.name}</span>}
       </div>
+
       {message && (
         <p
           className={`text-sm mb-4 ${message.includes('✅') ? 'text-green-600' : 'text-red-500'}`}
