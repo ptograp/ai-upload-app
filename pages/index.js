@@ -38,13 +38,13 @@ export default function Home() {
 
     try {
       const { error: uploadError } = await supabase.storage
-        .from('uploads')
+        .from('files')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('uploads')
+        .from('files')
         .getPublicUrl(filePath);
 
       const { error: insertError } = await supabase
