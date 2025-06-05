@@ -1,37 +1,21 @@
-// pages/index.js
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [files, setFiles] = useState([]);
-  const [search, setSearch] = useState("");
-  const [user, setUser] = useState(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
+    fetchFiles();
   }, []);
 
-  useEffect(() => {
-    if (user) fetchFiles();
-  }, [user]);
-
   const fetchFiles = async () => {
-    const { data, error } = await supabase
-      .from("Files")
-      .select("id, filename, url")
-      .eq("user_id", user.id);
-
+    const { data, error } = await supabase.from('Files').select('*').order('uploaded_at', { ascending: false });
     if (error) {
-      console.error("❌ 파일 조회 오류:", error.message);
+      console.error('Fetch error:', error.message);
     } else {
       setFiles(data);
     }
@@ -42,115 +26,94 @@ export default function Home() {
   };
 
   const handleUpload = async () => {
-    if (!file || !user) return;
-    setUploading(true);
-    const filePath = `${user.id}/${Date.now()}-${file.name}`;
+    if (!file) {
+      setMessage('파일을 먼저 선택하세요.');
+      return;
+    }
 
-    const { error: uploadError } = await supabase.storage
-      .from("files")
-      .upload(filePath, file);
+    setUploading(true);
+    const encodedName = encodeURIComponent(file.name);
+    const filePath = `${Date.now()}-${encodedName}`;
+
+    const { error: uploadError } = await supabase.storage.from('files').upload(filePath, file);
 
     if (uploadError) {
-      console.error("🚫 Upload error:", uploadError);
-      setMessage("업로드 실패: " + uploadError.message);
+      console.error('🚫 Upload error:', uploadError.message);
+      setMessage('업로드 실패: ' + uploadError.message);
       setUploading(false);
       return;
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("files").getPublicUrl(filePath);
+    const { data: { publicUrl } } = supabase.storage.from('files').getPublicUrl(filePath);
 
-    const { error: insertError } = await supabase.from("Files").insert([
+    const { error: insertError } = await supabase.from('Files').insert([
       {
         filename: file.name,
         url: publicUrl,
-        user_id: user.id,
+        uploaded_at: new Date().toISOString(),
       },
     ]);
 
     if (insertError) {
-      setMessage("DB 저장 실패: " + insertError.message);
+      setMessage('DB 저장 실패: ' + insertError.message);
     } else {
-      setMessage("✅ 업로드 완료!");
-      fetchFiles();
+      setMessage('✅ 업로드 완료!');
       setFile(null);
+      fetchFiles();
     }
 
     setUploading(false);
   };
 
-  const handleDelete = async (id, url) => {
-    const filename = url.split("/").pop();
-    const filePath = `${user.id}/${filename}`;
-
-    const { error: deleteError } = await supabase.storage
-      .from("files")
-      .remove([filePath]);
+  const handleDelete = async (url) => {
+    const key = decodeURIComponent(url.split('/').pop());
+    const { error: deleteError } = await supabase.storage.from('files').remove([key]);
 
     if (deleteError) {
-      console.error("삭제 실패:", deleteError);
+      alert('삭제 실패: ' + deleteError.message);
       return;
     }
 
-    await supabase.from("Files").delete().eq("id", id);
-    setFiles(files.filter((f) => f.id !== id));
+    await supabase.from('Files').delete().eq('url', url);
+    fetchFiles();
   };
 
-  return (
-    <div className="p-8 max-w-2xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-center">📁 파일 업로드</h1>
+  const filteredFiles = files.filter(f => f.filename.toLowerCase().includes(search.toLowerCase()));
 
-      <input
-        className="w-full border px-4 py-2 rounded"
-        type="file"
-        onChange={handleFileChange}
-      />
+  return (
+    <div className="min-h-screen bg-white text-center p-8">
+      <h1 className="text-3xl font-semibold mb-4">📂 파일 업로드</h1>
+      <input type="file" onChange={handleFileChange} className="mb-2" />
       <button
         onClick={handleUpload}
         disabled={uploading}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        className="ml-2 px-4 py-1 bg-blue-500 text-white rounded"
       >
-        {uploading ? "업로드 중..." : "업로드"}
+        {uploading ? '업로드 중...' : '업로드'}
       </button>
-      {message && <p className="text-center text-red-600">{message}</p>}
+      {message && <p className="mt-2 text-sm text-red-500">{message}</p>}
 
-      <input
-        className="w-full border px-4 py-2 rounded"
-        type="text"
-        placeholder="폴더/파일명 검색"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {files
-          .filter((f) => f.filename.toLowerCase().includes(search.toLowerCase()))
-          .map((file) => (
-            <div
-              key={file.id}
-              className="border p-4 rounded shadow flex flex-col justify-between"
-            >
-              <p className="font-medium break-all">📄 {file.filename}</p>
-              <div className="flex justify-between mt-2">
-                <a
-                  className="text-blue-600 underline"
-                  href={file.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  다운로드
-                </a>
-                <button
-                  onClick={() => handleDelete(file.id, file.url)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="mt-6">
+        <input
+          type="text"
+          placeholder="파일 이름 검색..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border p-2 rounded w-64"
+        />
       </div>
+
+      <ul className="mt-6 space-y-2 max-w-xl mx-auto text-left">
+        {filteredFiles.map((f) => (
+          <li key={f.url} className="border p-3 rounded flex justify-between items-center">
+            <span className="truncate max-w-xs">{f.filename}</span>
+            <div className="space-x-2">
+              <a href={f.url} download={f.filename} className="text-blue-500 underline" target="_blank">다운로드</a>
+              <button onClick={() => handleDelete(f.url)} className="text-red-600">삭제</button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
