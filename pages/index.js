@@ -6,84 +6,110 @@ export default function Home() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
-  const [files, setFiles] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const fetchFiles = async () => {
-    const { data, error } = await supabase.from('Files').select('*').order('uploaded_at', { ascending: false });
-    if (!error) setFiles(data);
-  };
+  const [search, setSearch] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
     fetchFiles();
   }, []);
 
-  const handleFileChange = (e) => setFile(e.target.files[0]);
+  const fetchFiles = async () => {
+    const { data, error } = await supabase
+      .from('Files')
+      .select('*')
+      .order('uploaded_at', { ascending: false });
+    if (data) setUploadedFiles(data);
+  };
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage('⚠️ 파일을 먼저 선택하세요.');
+      setMessage('파일을 먼저 선택하세요.');
       return;
     }
+
     setUploading(true);
-    const encodedName = encodeURIComponent(file.name);
+    const fileName = file.name;
+    const encodedName = encodeURIComponent(fileName);
     const filePath = `${Date.now()}-${encodedName}`;
-    const { error: uploadError } = await supabase.storage.from('files').upload(filePath, file);
+
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, file);
+
     if (uploadError) {
       console.error('Upload error:', uploadError);
-      setMessage(`업로드 실패: ${uploadError.message}`);
+      setMessage('업로드 실패: ' + uploadError.message);
       setUploading(false);
       return;
     }
-    const { data: { publicUrl } } = supabase.storage.from('files').getPublicUrl(filePath);
-    const { error: insertError } = await supabase.from('Files').insert([{ filename: file.name, url: publicUrl, uploaded_at: new Date().toISOString() }]);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(filePath);
+
+    const { error: insertError } = await supabase
+      .from('Files')
+      .insert([{ filename: file.name, url: publicUrl }]);
+
     if (insertError) {
       setMessage('DB 저장 실패: ' + insertError.message);
     } else {
-      setMessage('✅ 업로드 성공!');
+      setMessage('✅ 업로드 완료!');
       setFile(null);
       fetchFiles();
     }
+
     setUploading(false);
   };
 
-  const filteredFiles = files.filter(f => f.filename.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredFiles = uploadedFiles.filter((item) =>
+    item.filename.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png" alt="Google Logo" width={200} style={{ marginBottom: '20px' }} />
-
-      <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '600px', marginBottom: '24px' }}>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
+      <img src="/t3q-logo.png" alt="T3Q Logo" className="w-[160px] mb-4" />
+      <div className="flex items-center gap-2 mb-4 w-full max-w-lg">
         <input
           type="text"
           placeholder="파일 이름 검색..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ flex: 1, padding: '12px', borderRadius: '24px 0 0 24px', border: '1px solid #ccc', outline: 'none', fontSize: '16px' }}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border px-4 py-2 rounded w-full"
         />
-        <input
-          type="file"
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-          id="fileUpload"
-        />
-        <label htmlFor="fileUpload" style={{ backgroundColor: '#eee', padding: '12px', borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc' }}>📎</label>
+        <input type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
+        <label
+          htmlFor="file-upload"
+          className="bg-gray-200 text-sm px-3 py-2 rounded cursor-pointer hover:bg-gray-300"
+        >
+          파일 선택
+        </label>
         <button
           onClick={handleUpload}
+          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
           disabled={uploading}
-          style={{ padding: '12px 16px', borderRadius: '0 24px 24px 0', backgroundColor: '#4285f4', color: 'white', border: 'none', fontWeight: 'bold' }}
         >
-          업로드
+          {uploading ? '업로드 중...' : '업로드'}
         </button>
       </div>
+      {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
 
-      <div style={{ color: 'red', marginBottom: '16px' }}>{message}</div>
-
-      <div style={{ width: '100%', maxWidth: '600px' }}>
-        {filteredFiles.map(file => (
-          <div key={file.url} style={{ padding: '10px 0', borderBottom: '1px solid #eee' }}>
-            <a href={file.url} target="_blank" rel="noopener noreferrer" download={file.filename}>
-              📄 {file.filename}
+      <div className="w-full max-w-lg space-y-2">
+        {filteredFiles.map((item) => (
+          <div key={item.url} className="flex justify-between items-center border rounded p-2">
+            <span className="text-sm truncate w-3/4">📄 {item.filename}</span>
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 text-sm hover:underline"
+              download={item.filename}
+            >
+              다운로드
             </a>
           </div>
         ))}
@@ -91,4 +117,3 @@ export default function Home() {
     </div>
   );
 }
-
